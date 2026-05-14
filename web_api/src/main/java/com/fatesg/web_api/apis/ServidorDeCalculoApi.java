@@ -18,15 +18,33 @@ public class ServidorDeCalculoApi implements ClienteDeCalculoFolhaInterface {
     private Socket cliente;
     private PrintWriter saida;
     private BufferedReader entrada;
+    private boolean usarServidorPrimario = true;
 
     public ServidorDeCalculoApi() {
         super();
     }
 
     private void conectar() throws IOException {
-        this.cliente = new Socket(JsonRPCConfig.JSON_RPC_SERVER_HOST, (int) JsonRPCConfig.JSON_RPC_SERVER_PORT);
+
+        String host;
+        int porta;
+
+        if (usarServidorPrimario) {
+            host = JsonRPCConfig.JSON_RPC_SERVER_HOST;
+            porta = JsonRPCConfig.JSON_RPC_SERVER_PORT;
+        } else {
+            host = JsonRPCConfig.JSON_RPC_SERVER_HOST2;
+            porta = JsonRPCConfig.JSON_RPC_SERVER_PORT2;
+        }
+
+        usarServidorPrimario = !usarServidorPrimario;
+
+        this.cliente = new Socket(host, porta);
+
         this.saida = new PrintWriter(cliente.getOutputStream(), true);
-        this.entrada = new BufferedReader(new InputStreamReader(cliente.getInputStream()));
+
+        this.entrada = new BufferedReader(
+                new InputStreamReader(cliente.getInputStream()));
     }
 
     private void fecharConexao() throws IOException {
@@ -77,14 +95,14 @@ public class ServidorDeCalculoApi implements ClienteDeCalculoFolhaInterface {
                 throw new Exception(response.error.message);
             }
 
-            if(response.result == null)
+            if (response.result == null)
                 throw new Exception("Resultado nulo");
 
             var parser = new Gson();
             String retorno = parser.toJson(response.result);
             FolhaDto dto = parser.fromJson(retorno, FolhaDto.class);
             return dto;
-            
+
         } catch (IOException e) {
             System.err.println("Erro de IOException no calcularFolhaDePagamento: " + e.getMessage());
             e.printStackTrace();
